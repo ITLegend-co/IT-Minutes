@@ -19,6 +19,7 @@
       </div>
 
       <nav class="side-nav" aria-label="Page sections">
+        <a href="#dataLibrary">Saved Meetings</a>
         <a href="#meetingDetails">Meeting Details</a>
         <a href="#taskEditor">Task Updates</a>
         <a href="#outputPanel">Generated Minutes</a>
@@ -38,6 +39,8 @@
           <p class="muted">Create clear minutes from task updates without manually formatting everything.</p>
         </div>
         <div class="top-actions">
+          <button class="ghost" id="loadLatestDataBtn" type="button">Load Latest</button>
+          <button class="primary" id="saveFirebaseTopBtn" type="button">Save to Firebase</button>
           <button class="ghost" id="saveDraftBtn" type="button">Save Draft</button>
           <button class="ghost" id="loadDraftBtn" type="button">Load Draft</button>
           <button class="danger ghost" id="resetBtn" type="button">Reset</button>
@@ -46,6 +49,70 @@
 
       <section class="workspace">
         <form class="input-panel" id="meetingForm">
+          <section class="form-card" id="dataLibrary">
+            <div class="section-head stacked-on-mobile">
+              <div>
+                <p class="eyebrow">Firebase Database</p>
+                <h2>Saved Meeting Records</h2>
+                <p class="muted">Save meeting records to Firebase Realtime Database, load the latest record, or view previous minutes.</p>
+              </div>
+              <span class="status-pill" id="dataStatus">Connecting to Firebase...</span>
+            </div>
+
+            <div class="auth-box">
+              <div>
+                <h3>Firebase Sign In</h3>
+                <p class="muted">Recommended if your database rules require authentication.</p>
+              </div>
+              <div class="auth-grid">
+                <label>
+                  Email
+                  <input id="firebaseEmail" type="email" placeholder="your-email@example.com" autocomplete="email" />
+                </label>
+                <label>
+                  Password
+                  <input id="firebasePassword" type="password" placeholder="Firebase password" autocomplete="current-password" />
+                </label>
+                <div class="button-row auth-buttons">
+                  <button class="primary" id="firebaseSignInBtn" type="button">Sign In</button>
+                  <button class="ghost" id="firebaseSignOutBtn" type="button">Sign Out</button>
+                </div>
+              </div>
+              <span class="status-pill auth-status" id="firebaseAuthStatus">Checking sign-in status...</span>
+            </div>
+
+            <div class="data-toolbar">
+              <label>
+                Previous meeting records
+                <select id="recordsSelect">
+                  <option value="">Loading Firebase records...</option>
+                </select>
+              </label>
+              <div class="button-row data-buttons">
+                <button class="primary" id="loadSelectedRecordBtn" type="button">Load Selected</button>
+                <button class="ghost" id="refreshRecordsBtn" type="button">Refresh List</button>
+                <button class="ghost" id="saveFirebaseBtn" type="button">Save to Firebase</button>
+              </div>
+            </div>
+
+            <div class="import-box">
+              <div>
+                <h3>Import / Backup Meeting Data</h3>
+                <p class="muted">Firebase will be the main storage. You can still import or download JSON as backup.</p>
+              </div>
+              <div class="button-row">
+                <label class="file-button">
+                  Import JSON
+                  <input id="importJsonInput" type="file" accept="application/json,.json" />
+                </label>
+              </div>
+            </div>
+
+            <div class="notice-box">
+              <strong>Firebase note:</strong> New meeting records are saved under <code>meetingRecords</code> in Firebase Realtime Database. The app also keeps <code>metadata/latestId</code> so the latest meeting can load automatically.
+            </div>
+          </section>
+
           <section class="form-card" id="meetingDetails">
             <div class="section-head">
               <div>
@@ -140,6 +207,8 @@
               <button class="ghost" id="printBtn" type="button">Print</button>
               <button class="ghost" id="downloadHtmlBtn" type="button">Download HTML</button>
               <button class="ghost" id="downloadWordBtn" type="button">Download Word</button>
+              <button class="ghost" id="downloadJsonBtn" type="button">Download Data JSON</button>
+              <button class="primary" id="saveFirebaseOutputBtn" type="button">Save to Firebase</button>
             </div>
           </div>
 
@@ -242,6 +311,7 @@
   </template>
 
   <script src="sample-data.js"></script>
+  <script type="module" src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

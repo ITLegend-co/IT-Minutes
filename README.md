@@ -1,70 +1,147 @@
-# IT Meeting Minutes Generator
+# IT Meeting Minutes Generator — Firebase Version
 
-A static website for generating clean IT meeting minutes from task updates.
+A GitHub Pages-ready website for generating structured IT meeting minutes and saving/loading records from Firebase Realtime Database.
 
-## What this website does
-
-- Lets you enter meeting title, date, time, attendance and objective.
-- Lets you add/edit IT Support and Project task updates.
-- Converts long task notes into a clean meeting minutes format.
-- Groups minutes by section.
-- Creates summary counts, key decisions, and action items automatically.
-- Supports Copy, Print, Download HTML, Download Word, Save Draft, Load Draft and Reset.
-- Works on GitHub Pages without backend, database or build process.
-
-## How to deploy to GitHub Pages
-
-1. Create a new GitHub repository.
-2. Upload these files directly into the repository root:
+## Files
 
 ```text
 index.html
 styles.css
 app.js
 sample-data.js
+firebase-config.js
 README.md
+EDITING-NOTES.txt
 ```
 
-3. Go to **Settings → Pages**.
-4. Set **Source** to **Deploy from a branch**.
-5. Select **Branch: main** and **Folder: /root**.
-6. Click **Save**.
+## What this version can do
 
-Your website should be available after GitHub Pages finishes deployment.
+- Save meeting records directly to Firebase Realtime Database.
+- Load the latest saved meeting automatically.
+- View and load previous meeting records from Firebase.
+- Generate clean Minutes of Meeting from the form.
+- Copy, print, download HTML, download Word, and download JSON backup.
+- Save temporary browser draft using localStorage.
+- Run directly on GitHub Pages.
 
-## How to edit the default meeting data
+## Firebase Realtime Database structure
 
-Open `sample-data.js` and update the `DEFAULT_MEETING` object.
+The app saves data like this:
 
-Each task uses this format:
+```text
+meetingRecords/
+  <recordId>/
+    title
+    date
+    preparedBy
+    attendance
+    objective
+    tasks
+    createdAt
+    updatedAt
 
-```js
+metadata/
+  latestId
+```
+
+## Firebase setup
+
+Your Firebase configuration is already placed in:
+
+```text
+firebase-config.js
+```
+
+It includes:
+
+```text
+Project ID: it-minutes
+Realtime Database URL: https://it-minutes-default-rtdb.asia-southeast1.firebasedatabase.app/
+```
+
+## Recommended Firebase security rules
+
+Recommended if you want only signed-in Firebase users to access the records:
+
+```json
 {
-  section: "IT Support",
-  pic: "Adly",
-  task: "Task title",
-  status: "Still In Progress",
-  description: "Main discussion or progress update.",
-  instruction: "New instruction, decision or latest update.",
-  taskDate: "",
-  deadline: "Before end of July",
-  extendedDeadline: "",
-  dateComplete: "",
-  comment: "Additional notes."
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null"
+  }
 }
 ```
 
-## How to use during meeting
+Then enable Firebase Authentication:
+
+```text
+Firebase Console → Authentication → Sign-in method → Email/Password → Enable
+```
+
+Create your user account in:
+
+```text
+Authentication → Users → Add user
+```
+
+Use that email and password in the website sign-in form.
+
+## Quick testing rules
+
+Only use this temporarily for testing because anyone with the website can read/write your database:
+
+```json
+{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}
+```
+
+## GitHub Pages setup
+
+Upload all files directly to your repository root:
+
+```text
+index.html
+styles.css
+app.js
+sample-data.js
+firebase-config.js
+README.md
+EDITING-NOTES.txt
+```
+
+Then use:
+
+```text
+Settings → Pages → Deploy from a branch → main → /root
+```
+
+## Important GitHub/Firebase domain note
+
+If you use Firebase Authentication, add your GitHub Pages domain as an authorized domain:
+
+```text
+Firebase Console → Authentication → Settings → Authorized domains
+```
+
+Add something like:
+
+```text
+yourusername.github.io
+```
+
+## How to use
 
 1. Open the website.
-2. Update meeting details.
-3. Add or edit tasks.
-4. Click **Generate**.
-5. Review the generated minutes.
-6. Click **Copy**, **Print**, **Download HTML**, or **Download Word**.
+2. Sign in with your Firebase user email/password if your rules require authentication.
+3. Fill in the meeting details and task updates.
+4. Click `Generate` to preview the minutes.
+5. Click `Save to Firebase`.
+6. Use `Load Latest`, `Refresh List`, or `Load Selected` to view saved records later.
 
-## Notes
+## Backup option
 
-- Save Draft stores the current form in the browser only.
-- Load Draft works only on the same browser/device where the draft was saved.
-- No meeting data is uploaded anywhere.
+You can still click `Download Data JSON` as a backup copy of the current meeting data.

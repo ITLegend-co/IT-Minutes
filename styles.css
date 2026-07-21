@@ -395,3 +395,98 @@ button.icon { font-size: 12px; padding: 8px 10px; }
   .minutes-paper { margin: 0; padding: 0; box-shadow: none; border-radius: 0; }
   .minute-item { page-break-inside: avoid; }
 }
+
+/* Data folder / saved meeting records */
+code {
+  color: #bae6fd;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 8px;
+  padding: 2px 6px;
+}
+.data-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.05);
+}
+.data-buttons { justify-content: flex-end; }
+.import-box, .notice-box {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255,255,255,.055);
+}
+.import-box {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+.import-box h3 { margin: 0 0 6px; }
+.import-box p { margin: 0; line-height: 1.5; }
+.notice-box {
+  color: var(--muted);
+  line-height: 1.55;
+  border-color: rgba(54,196,243,.25);
+  background: rgba(54,196,243,.08);
+}
+.notice-box strong { color: var(--text); }
+.file-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 11px 15px;
+  color: var(--text);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 10px 24px rgba(0,0,0,.18);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.file-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+@media (max-width: 760px) {
+  .data-toolbar, .import-box { grid-template-columns: 1fr; display: grid; }
+  .data-buttons { justify-content: stretch; }
+  .file-button { width: 100%; }
+}
+
+/* Firebase sign-in / database controls */
+.auth-box {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid rgba(54,196,243,.25);
+  border-radius: 18px;
+  background: rgba(54,196,243,.07);
+  display: grid;
+  gap: 14px;
+}
+.auth-box h3 { margin: 0 0 6px; }
+.auth-box p { margin: 0; line-height: 1.5; }
+.auth-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+.auth-buttons { justify-content: flex-end; }
+.auth-status {
+  width: max-content;
+  max-width: 100%;
+}
+@media (max-width: 900px) {
+  .auth-grid { grid-template-columns: 1fr; }
+  .auth-buttons { justify-content: stretch; }
+}

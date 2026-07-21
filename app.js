@@ -1,6 +1,14 @@
 const STORAGE_KEY = "itMeetingMinutesDraftV1";
-const state = structuredClone(DEFAULT_MEETING);
+const cloneData = (value) => {
+  if (typeof structuredClone === "function") return structuredClone(value);
+  return JSON.parse(JSON.stringify(value));
+};
+const state = cloneData(DEFAULT_MEETING);
 let allCollapsed = false;
+let firebaseRecords = [];
+let latestFirebaseId = "";
+let currentFirebaseId = "";
+let firebaseAutoLoaded = false;
 
 const elements = {
   form: document.getElementById("meetingForm"),
@@ -16,7 +24,22 @@ const elements = {
   sectionFilter: document.getElementById("sectionFilter"),
   searchInput: document.getElementById("searchInput"),
   minutesOutput: document.getElementById("minutesOutput"),
-  summaryStrip: document.getElementById("summaryStrip")
+  summaryStrip: document.getElementById("summaryStrip"),
+  recordsSelect: document.getElementById("recordsSelect"),
+  loadSelectedRecordBtn: document.getElementById("loadSelectedRecordBtn"),
+  refreshRecordsBtn: document.getElementById("refreshRecordsBtn"),
+  loadLatestDataBtn: document.getElementById("loadLatestDataBtn"),
+  importJsonInput: document.getElementById("importJsonInput"),
+  dataStatus: document.getElementById("dataStatus"),
+  downloadJsonBtn: document.getElementById("downloadJsonBtn"),
+  saveFirebaseBtn: document.getElementById("saveFirebaseBtn"),
+  saveFirebaseTopBtn: document.getElementById("saveFirebaseTopBtn"),
+  saveFirebaseOutputBtn: document.getElementById("saveFirebaseOutputBtn"),
+  firebaseEmail: document.getElementById("firebaseEmail"),
+  firebasePassword: document.getElementById("firebasePassword"),
+  firebaseSignInBtn: document.getElementById("firebaseSignInBtn"),
+  firebaseSignOutBtn: document.getElementById("firebaseSignOutBtn"),
+  firebaseAuthStatus: document.getElementById("firebaseAuthStatus")
 };
 
 function escapeHtml(value) {
@@ -41,6 +64,287 @@ function formatDateForDisplay(dateValue) {
   const date = new Date(dateValue + "T00:00:00");
   if (Number.isNaN(date.getTime())) return dateValue;
   return date.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function resetGeneratedOutput() {
+  elements.minutesOutput.innerHTML = `
+    <div class="empty-state">
+      <p class="eyebrow">Ready</p>
+      <h3>Your minutes will appear here.</h3>
+      <p>Click <strong>Generate</strong> after updating the meeting details and task list.</p>
+    </div>`;
+}
+
+function setDataStatus(message) {
+  if (elements.dataStatus) elements.dataStatus.textContent = message;
+}
+
+function cleanMeetingData(data) {
+  const cleaned = {
+    title: normalize(data?.title) || "I.T Meeting",
+    preparedBy: normalize(data?.preparedBy) || "Prepared by: IT Legend",
+    date: normalize(data?.date) || todayIso(),
+    time: normalize(data?.time),
+    attendance: normalize(data?.attendance),
+    objective: normalize(data?.objective),
+    tasks: []
+  };
+
+  cleaned.tasks = Array.isArray(data?.tasks) ? data.tasks.map(task => ({
+    section: normalize(task.section) || "IT Support",
+    pic: normalize(task.pic),
+    task: normalize(task.task) || "Untitled task",
+    status: normalize(task.status) || "Still In Progress",
+    description: normalize(task.description),
+    instruction: normalize(task.instruction),
+    taskDate: normalize(task.taskDate),
+    deadline: normalize(task.deadline),
+    extendedDeadline: normalize(task.extendedDeadline),
+    dateComplete: normalize(task.dateComplete),
+    comment: normalize(task.comment)
+  })) : [];
+
+  if (normalize(data?.firebaseId)) cleaned.firebaseId = normalize(data.firebaseId);
+
+  return cleaned;
+}
+
+function replaceStateWith(data, sourceLabel = "meeting record") {
+  const cleaned = cleanMeetingData(data);
+  Object.keys(state).forEach(key => delete state[key]);
+  Object.assign(state, cleaned);
+  populateMeetingDetails();
+  renderTasks();
+  refreshSummaryStrip();
+  resetGeneratedOutput();
+  setDataStatus(`Loaded: ${sourceLabel}`);
+}
+
+function getFirebaseStore() {
+  if (window.ITMinutesFirebase) return Promise.resolve(window.ITMinutesFirebase);
+  if (window.ITMinutesFirebaseReady) return window.ITMinutesFirebaseReady;
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Firebase did not initialize. Check firebase-config.js and internet connection.")), 10000);
+
+    window.addEventListener("it-minutes-firebase-ready", (event) => {
+      clearTimeout(timeout);
+      resolve(event.detail || window.ITMinutesFirebase);
+    }, { once: true });
+  });
+}
+
+function setAuthStatus(message) {
+  if (elements.firebaseAuthStatus) elements.firebaseAuthStatus.textContent = message;
+}
+
+function firebaseErrorMessage(error) {
+  const raw = String(error?.message || error || "Unknown Firebase error");
+  if (raw.includes("Permission denied") || raw.includes("permission_denied")) {
+    return "Permission denied. Please sign in or check Firebase Realtime Database rules.";
+  }
+  if (raw.includes("auth/invalid-credential") || raw.includes("auth/user-not-found") || raw.includes("auth/wrong-password")) {
+    return "Invalid Firebase email or password.";
+  }
+  return raw;
+}
+
+function meetingLabel(record) {
+  const date = record.date ? formatDateForDisplay(record.date) : "No date";
+  return `${date} — ${record.title || record.id || "Meeting Record"}`;
+}
+
+function populateRecordsSelect() {
+  if (!elements.recordsSelect) return;
+
+  if (!firebaseRecords.length) {
+    elements.recordsSelect.innerHTML = `<option value="">No Firebase record found</option>`;
+    return;
+  }
+
+  elements.recordsSelect.innerHTML = firebaseRecords.map(record => `
+    <option value="${escapeHtml(record.id)}">${escapeHtml(meetingLabel(record))}</option>`).join("");
+
+  if (currentFirebaseId) elements.recordsSelect.value = currentFirebaseId;
+  else if (latestFirebaseId) elements.recordsSelect.value = latestFirebaseId;
+}
+
+async function loadFirebaseRecords({ autoLoadLatest = false, showAlert = false } = {}) {
+  try {
+    setDataStatus("Loading Firebase records...");
+    const store = await getFirebaseStore();
+    const result = await store.listMeetings();
+    firebaseRecords = Array.isArray(result.records) ? result.records : [];
+    latestFirebaseId = result.latestId || firebaseRecords[0]?.id || "";
+    populateRecordsSelect();
+    setDataStatus(firebaseRecords.length ? `${firebaseRecords.length} Firebase record(s) found` : "No Firebase record found");
+
+    if (autoLoadLatest && latestFirebaseId) {
+      firebaseAutoLoaded = true;
+      await loadFirebaseRecordById(latestFirebaseId, "latest Firebase record");
+    }
+  } catch (error) {
+    console.warn(error);
+    firebaseRecords = [];
+    latestFirebaseId = "";
+    if (elements.recordsSelect) elements.recordsSelect.innerHTML = `<option value="">Firebase not loaded</option>`;
+    const message = firebaseErrorMessage(error);
+    setDataStatus(message.includes("Permission denied") ? "Sign in required" : "Firebase not loaded");
+    if (showAlert) alert(message);
+  }
+}
+
+async function loadFirebaseRecordById(id, label = "Firebase record") {
+  if (!id) {
+    alert("Please select a Firebase meeting record first.");
+    return;
+  }
+
+  try {
+    setDataStatus("Loading meeting data...");
+    const store = await getFirebaseStore();
+    const data = await store.getMeeting(id);
+    const record = firebaseRecords.find(item => item.id === id);
+    currentFirebaseId = id;
+    replaceStateWith(data, record?.title || label);
+    if (elements.recordsSelect) elements.recordsSelect.value = id;
+    setDataStatus(`Loaded from Firebase: ${record?.title || data.title || id}`);
+  } catch (error) {
+    console.error(error);
+    setDataStatus("Failed to load Firebase record");
+    alert(firebaseErrorMessage(error));
+  }
+}
+
+function loadSelectedRecord() {
+  const id = elements.recordsSelect?.value || "";
+  loadFirebaseRecordById(id, "selected Firebase record");
+}
+
+function loadLatestData() {
+  if (latestFirebaseId) {
+    loadFirebaseRecordById(latestFirebaseId, "latest Firebase record");
+    return;
+  }
+  loadFirebaseRecords({ autoLoadLatest: true, showAlert: true });
+}
+
+function currentMeetingData() {
+  collectMeetingDetails();
+  const data = cleanMeetingData(state);
+  if (currentFirebaseId) data.firebaseId = currentFirebaseId;
+  return data;
+}
+
+function suggestedDataFilename() {
+  const data = currentMeetingData();
+  return `${data.date || todayIso()}-${slug(data.title)}.json`;
+}
+
+function downloadMeetingJson() {
+  const data = currentMeetingData();
+  downloadBlob(JSON.stringify(data, null, 2), suggestedDataFilename(), "application/json;charset=utf-8");
+  flashButton(elements.downloadJsonBtn, "Downloaded");
+}
+
+async function saveMeetingToFirebase() {
+  try {
+    const data = currentMeetingData();
+    setDataStatus("Saving to Firebase...");
+    const store = await getFirebaseStore();
+    const result = await store.saveMeeting(currentFirebaseId, data);
+    currentFirebaseId = result.id;
+    setDataStatus("Saved to Firebase");
+    [elements.saveFirebaseBtn, elements.saveFirebaseTopBtn, elements.saveFirebaseOutputBtn].filter(Boolean).forEach(btn => flashButton(btn, "Saved"));
+    await loadFirebaseRecords();
+    if (elements.recordsSelect) elements.recordsSelect.value = currentFirebaseId;
+  } catch (error) {
+    console.error(error);
+    setDataStatus("Failed to save");
+    alert(firebaseErrorMessage(error));
+  }
+}
+
+async function signInFirebase() {
+  const email = normalize(elements.firebaseEmail?.value);
+  const password = elements.firebasePassword?.value || "";
+
+  if (!email || !password) {
+    alert("Please enter your Firebase email and password.");
+    return;
+  }
+
+  try {
+    setAuthStatus("Signing in...");
+    const store = await getFirebaseStore();
+    await store.signIn(email, password);
+    if (elements.firebasePassword) elements.firebasePassword.value = "";
+    setAuthStatus(`Signed in as ${email}`);
+    await loadFirebaseRecords({ autoLoadLatest: !firebaseAutoLoaded });
+  } catch (error) {
+    console.error(error);
+    setAuthStatus("Sign in failed");
+    alert(firebaseErrorMessage(error));
+  }
+}
+
+async function signOutFirebase() {
+  try {
+    const store = await getFirebaseStore();
+    await store.signOutUser();
+    currentFirebaseId = "";
+    setAuthStatus("Signed out");
+    setDataStatus("Signed out from Firebase");
+  } catch (error) {
+    console.error(error);
+    alert(firebaseErrorMessage(error));
+  }
+}
+
+async function initializeFirebaseConnection() {
+  try {
+    const store = await getFirebaseStore();
+    store.onAuthChanged((user) => {
+      if (user) {
+        setAuthStatus(`Signed in as ${user.email || "Firebase user"}`);
+        loadFirebaseRecords({ autoLoadLatest: !firebaseAutoLoaded });
+      } else {
+        setAuthStatus("Not signed in");
+      }
+    });
+
+    // This will also work if your Realtime Database rules allow public read.
+    await loadFirebaseRecords({ autoLoadLatest: true });
+  } catch (error) {
+    console.warn(error);
+    setDataStatus("Firebase not ready");
+    setAuthStatus("Firebase not ready");
+  }
+}
+
+
+function importJsonFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      currentFirebaseId = normalize(data.firebaseId);
+      replaceStateWith(data, file.name);
+    } catch (error) {
+      console.error(error);
+      alert("Invalid JSON file. Please select a meeting data JSON file exported from this website.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+  reader.readAsText(file);
 }
 
 function splitIntoBullets(text) {
@@ -154,7 +458,7 @@ function renderTasks() {
     });
 
     card.querySelector(".duplicate-task").addEventListener("click", () => {
-      const copy = structuredClone(state.tasks[task.originalIndex]);
+      const copy = cloneData(state.tasks[task.originalIndex]);
       copy.task = `${copy.task || "Task"} Copy`;
       state.tasks.splice(task.originalIndex + 1, 0, copy);
       renderTasks();
@@ -453,6 +757,7 @@ function loadDraft() {
     return;
   }
   const parsed = JSON.parse(stored);
+  currentFirebaseId = normalize(parsed.firebaseId);
   Object.assign(state, parsed);
   populateMeetingDetails();
   renderTasks();
@@ -463,18 +768,14 @@ function loadDraft() {
 function resetAll() {
   const confirmed = confirm("Reset the form back to the default sample data?");
   if (!confirmed) return;
-  const fresh = structuredClone(DEFAULT_MEETING);
+  currentFirebaseId = "";
+  const fresh = cloneData(DEFAULT_MEETING);
   Object.keys(state).forEach(key => delete state[key]);
   Object.assign(state, fresh);
   populateMeetingDetails();
   renderTasks();
   refreshSummaryStrip();
-  elements.minutesOutput.innerHTML = `
-    <div class="empty-state">
-      <p class="eyebrow">Ready</p>
-      <h3>Your minutes will appear here.</h3>
-      <p>Click <strong>Generate</strong> after updating the meeting details and task list.</p>
-    </div>`;
+  resetGeneratedOutput();
 }
 
 function flashButton(button, text) {
@@ -496,6 +797,16 @@ function bindEvents() {
   document.getElementById("printBtn").addEventListener("click", printMinutes);
   document.getElementById("downloadHtmlBtn").addEventListener("click", downloadHtml);
   document.getElementById("downloadWordBtn").addEventListener("click", downloadWord);
+  elements.downloadJsonBtn?.addEventListener("click", downloadMeetingJson);
+  elements.saveFirebaseBtn?.addEventListener("click", saveMeetingToFirebase);
+  elements.saveFirebaseTopBtn?.addEventListener("click", saveMeetingToFirebase);
+  elements.saveFirebaseOutputBtn?.addEventListener("click", saveMeetingToFirebase);
+  elements.firebaseSignInBtn?.addEventListener("click", signInFirebase);
+  elements.firebaseSignOutBtn?.addEventListener("click", signOutFirebase);
+  elements.loadSelectedRecordBtn?.addEventListener("click", loadSelectedRecord);
+  elements.refreshRecordsBtn?.addEventListener("click", () => loadFirebaseRecords({ showAlert: true }));
+  elements.loadLatestDataBtn?.addEventListener("click", loadLatestData);
+  elements.importJsonInput?.addEventListener("change", importJsonFile);
   document.getElementById("saveDraftBtn").addEventListener("click", saveDraft);
   document.getElementById("loadDraftBtn").addEventListener("click", loadDraft);
   document.getElementById("resetBtn").addEventListener("click", resetAll);
@@ -514,3 +825,4 @@ populateMeetingDetails();
 renderTasks();
 refreshSummaryStrip();
 bindEvents();
+initializeFirebaseConnection();

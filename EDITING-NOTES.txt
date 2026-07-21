@@ -1,0 +1,29 @@
+QUICK EDITING GUIDE
+
+1. To change the default meeting title/date/attendance:
+   - Open sample-data.js
+   - Edit the DEFAULT_MEETING section.
+
+2. To add another default task:
+   - Copy one task block inside the tasks array.
+   - Paste it before the closing ]
+   - Make sure each task block is separated with a comma.
+
+3. Common mistake:
+   Every item inside an array needs a comma, for example:
+
+   details: [
+     "First sentence.",
+     "Second sentence."
+   ]
+
+4. To change design:
+   - Open styles.css
+
+5. To change how the minutes are generated:
+   - Open app.js
+   - Search for generateMinutesHtml()
+
+6. For GitHub Pages:
+   Upload files to repository root:
+   index.html, styles.css, app.js, sample-data.js, README.md

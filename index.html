@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IT Meeting Minutes Generator</title>
+  <meta name="description" content="A GitHub Pages-ready meeting minutes generator for IT meeting updates, tasks, decisions, and action items." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-card">
+        <div class="logo">IT</div>
+        <div>
+          <p class="eyebrow">Minutes Tool</p>
+          <h1>IT Meeting Generator</h1>
+        </div>
+      </div>
+
+      <nav class="side-nav" aria-label="Page sections">
+        <a href="#meetingDetails">Meeting Details</a>
+        <a href="#taskEditor">Task Updates</a>
+        <a href="#outputPanel">Generated Minutes</a>
+      </nav>
+
+      <div class="helper-card">
+        <p class="eyebrow">How to use</p>
+        <p>Add meeting details, update tasks, then generate clean minutes. You can copy, print, or download as Word.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Mountain Torq IT</p>
+          <h2>IT Meeting Minutes Generator</h2>
+          <p class="muted">Create clear minutes from task updates without manually formatting everything.</p>
+        </div>
+        <div class="top-actions">
+          <button class="ghost" id="saveDraftBtn" type="button">Save Draft</button>
+          <button class="ghost" id="loadDraftBtn" type="button">Load Draft</button>
+          <button class="danger ghost" id="resetBtn" type="button">Reset</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <form class="input-panel" id="meetingForm">
+          <section class="form-card" id="meetingDetails">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Step 01</p>
+                <h2>Meeting Details</h2>
+              </div>
+              <span class="status-pill">Editable</span>
+            </div>
+
+            <div class="grid two">
+              <label>
+                Meeting Title
+                <input id="meetingTitle" type="text" placeholder="I.T Meeting" />
+              </label>
+              <label>
+                Prepared By
+                <input id="preparedBy" type="text" placeholder="Prepared by IT" />
+              </label>
+              <label>
+                Date
+                <input id="meetingDate" type="date" />
+              </label>
+              <label>
+                Time
+                <input id="meetingTime" type="text" placeholder="9.30 AM" />
+              </label>
+            </div>
+
+            <label>
+              Attendance
+              <textarea id="attendance" rows="3" placeholder="Eizzat, Adly, Aron, Ros..."></textarea>
+            </label>
+
+            <label>
+              Meeting Objective
+              <textarea id="objective" rows="3" placeholder="Discuss current IT support progress, project updates, pending issues and next actions."></textarea>
+            </label>
+          </section>
+
+          <section class="form-card" id="taskEditor">
+            <div class="section-head stacked-on-mobile">
+              <div>
+                <p class="eyebrow">Step 02</p>
+                <h2>Task Updates</h2>
+                <p class="muted">Each task will become a clean item in the minutes.</p>
+              </div>
+              <div class="button-row">
+                <button class="ghost" id="addSupportBtn" type="button">+ IT Support</button>
+                <button class="ghost" id="addProjectBtn" type="button">+ Project</button>
+                <button class="ghost" id="collapseAllBtn" type="button">Collapse All</button>
+              </div>
+            </div>
+
+            <div class="task-toolbar">
+              <label>
+                Filter by status
+                <select id="statusFilter">
+                  <option value="All">All</option>
+                  <option value="Task Completed">Task Completed</option>
+                  <option value="Still In Progress">Still In Progress</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Monitoring">Monitoring</option>
+                </select>
+              </label>
+              <label>
+                Filter by section
+                <select id="sectionFilter">
+                  <option value="All">All</option>
+                  <option value="IT Support">IT Support</option>
+                  <option value="Project">Project</option>
+                </select>
+              </label>
+              <label>
+                Search task
+                <input id="searchInput" type="search" placeholder="Search PIC, task or note" />
+              </label>
+            </div>
+
+            <div class="task-list" id="taskList"></div>
+          </section>
+        </form>
+
+        <section class="output-panel" id="outputPanel">
+          <div class="sticky-output-header">
+            <div>
+              <p class="eyebrow">Output</p>
+              <h2>Generated Minutes</h2>
+            </div>
+            <div class="button-row">
+              <button class="primary" id="generateBtn" type="button">Generate</button>
+              <button class="ghost" id="copyBtn" type="button">Copy</button>
+              <button class="ghost" id="printBtn" type="button">Print</button>
+              <button class="ghost" id="downloadHtmlBtn" type="button">Download HTML</button>
+              <button class="ghost" id="downloadWordBtn" type="button">Download Word</button>
+            </div>
+          </div>
+
+          <div class="summary-strip" id="summaryStrip" aria-live="polite"></div>
+          <article class="minutes-paper" id="minutesOutput">
+            <div class="empty-state">
+              <p class="eyebrow">Ready</p>
+              <h3>Your minutes will appear here.</h3>
+              <p>Click <strong>Generate</strong> after updating the meeting details and task list.</p>
+            </div>
+          </article>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <template id="taskTemplate">
+    <article class="task-card">
+      <header class="task-card-head">
+        <div>
+          <p class="eyebrow task-section-label"></p>
+          <h3 class="task-title-preview"></h3>
+          <p class="muted task-meta-preview"></p>
+        </div>
+        <div class="task-actions">
+          <button class="icon ghost duplicate-task" type="button" title="Duplicate task">Duplicate</button>
+          <button class="icon ghost toggle-task" type="button" title="Expand or collapse">Collapse</button>
+          <button class="icon danger ghost remove-task" type="button" title="Remove task">Remove</button>
+        </div>
+      </header>
+
+      <div class="task-body">
+        <div class="grid three">
+          <label>
+            Section
+            <select data-field="section">
+              <option>IT Support</option>
+              <option>Project</option>
+              <option>Operation</option>
+              <option>Follow-Up</option>
+            </select>
+          </label>
+          <label>
+            Person In Charge
+            <input data-field="pic" type="text" placeholder="Adly / Eizzat / IT" />
+          </label>
+          <label>
+            Status
+            <select data-field="status">
+              <option>Still In Progress</option>
+              <option>Task Completed</option>
+              <option>Pending</option>
+              <option>Monitoring</option>
+              <option>Scheduled</option>
+              <option>On Hold</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          Task / Topic
+          <input data-field="task" type="text" placeholder="Example: KP Internet Solution" />
+        </label>
+
+        <label>
+          Task Description / Discussion
+          <textarea data-field="description" rows="5" placeholder="Write the discussion or progress update here. Numbered lines will become readable bullets."></textarea>
+        </label>
+
+        <label>
+          New Instruction / Update / Decision
+          <textarea data-field="instruction" rows="3" placeholder="Write any instruction, decision or latest update."></textarea>
+        </label>
+
+        <div class="grid four">
+          <label>
+            Task Date
+            <input data-field="taskDate" type="text" placeholder="20 May 2026" />
+          </label>
+          <label>
+            Deadline
+            <input data-field="deadline" type="text" placeholder="Before end of July" />
+          </label>
+          <label>
+            Extended Deadline
+            <input data-field="extendedDeadline" type="text" placeholder="If any" />
+          </label>
+          <label>
+            Date Complete
+            <input data-field="dateComplete" type="text" placeholder="If completed" />
+          </label>
+        </div>
+
+        <label>
+          Comment / Note
+          <textarea data-field="comment" rows="3" placeholder="Additional note, management request, or follow-up reminder."></textarea>
+        </label>
+      </div>
+    </article>
+  </template>
+
+  <script src="sample-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

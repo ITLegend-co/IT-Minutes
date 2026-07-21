@@ -12,6 +12,12 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-database.js";
 import {
+  getStorage,
+  ref as storageRef,
+  uploadBytesResumable,
+  getDownloadURL
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-storage.js";
+import {
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -32,6 +38,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 analyticsIsSupported()
   .then((supported) => {
@@ -115,6 +122,62 @@ async function saveMeeting(id, meetingData) {
   return { id: recordId };
 }
 
+function safeFileName(name = "image") {
+  const parts = String(name).split(".");
+  const extension = parts.length > 1 ? `.${parts.pop().toLowerCase()}` : "";
+  const base = parts.join(".") || "image";
+  return `${base}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "")
+    .slice(0, 70) + extension;
+}
+
+async function uploadTaskImage(file, context = {}, onProgress = () => {}) {
+  if (!file) throw new Error("No image selected.");
+  if (!file.type || !file.type.startsWith("image/")) throw new Error("Please upload image files only.");
+  if (file.size > 10 * 1024 * 1024) throw new Error("Image is too large. Please keep each image below 10MB.");
+
+  const user = auth.currentUser;
+  if (!user) throw new Error("Please sign in before uploading images.");
+
+  const meetingId = context.meetingId || "unsaved-meeting";
+  const taskId = context.taskId || "task";
+  const timestamp = Date.now();
+  const path = `meetingImages/${user.uid}/${meetingId}/${taskId}/${timestamp}-${safeFileName(file.name)}`;
+  const imageRef = storageRef(storage, path);
+
+  const uploadTask = uploadBytesResumable(imageRef, file, {
+    contentType: file.type,
+    customMetadata: {
+      meetingId: String(meetingId),
+      taskId: String(taskId)
+    }
+  });
+
+  return new Promise((resolve, reject) => {
+    uploadTask.on(
+      "state_changed",
+      (snapshot) => {
+        const progress = snapshot.totalBytes ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0;
+        onProgress(progress);
+      },
+      reject,
+      async () => {
+        const url = await getDownloadURL(uploadTask.snapshot.ref);
+        resolve({
+          url,
+          path,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          uploadedAt: new Date().toISOString()
+        });
+      }
+    );
+  });
+}
+
 async function signIn(email, password) {
   return signInWithEmailAndPassword(auth, email, password);
 }
@@ -135,6 +198,7 @@ const api = {
   listMeetings,
   getMeeting,
   saveMeeting,
+  uploadTaskImage,
   signIn,
   signOutUser,
   onAuthChanged,

@@ -55,6 +55,32 @@ function normalize(value) {
   return String(value ?? "").trim();
 }
 
+function escapeAttribute(value) {
+  return escapeHtml(value).replaceAll("`", "&#096;");
+}
+
+function imageArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function cleanImageRecord(image) {
+  const url = normalize(image?.url);
+  if (!url) return null;
+  return {
+    url,
+    caption: normalize(image?.caption),
+    name: normalize(image?.name),
+    path: normalize(image?.path),
+    type: normalize(image?.type),
+    size: Number(image?.size || 0),
+    uploadedAt: normalize(image?.uploadedAt)
+  };
+}
+
+function taskImageCount(task) {
+  return imageArray(task?.images).filter(image => normalize(image?.url)).length;
+}
+
 function slug(value) {
   return normalize(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "meeting-minutes";
 }
@@ -105,7 +131,8 @@ function cleanMeetingData(data) {
     deadline: normalize(task.deadline),
     extendedDeadline: normalize(task.extendedDeadline),
     dateComplete: normalize(task.dateComplete),
-    comment: normalize(task.comment)
+    comment: normalize(task.comment),
+    images: imageArray(task.images).map(cleanImageRecord).filter(Boolean)
   })) : [];
 
   if (normalize(data?.firebaseId)) cleaned.firebaseId = normalize(data.firebaseId);
@@ -149,6 +176,12 @@ function firebaseErrorMessage(error) {
   }
   if (raw.includes("auth/invalid-credential") || raw.includes("auth/user-not-found") || raw.includes("auth/wrong-password")) {
     return "Invalid Firebase email or password.";
+  }
+  if (raw.includes("storage/unauthorized")) {
+    return "Firebase Storage permission denied. Please sign in and check your Storage rules.";
+  }
+  if (raw.includes("storage/unauthenticated")) {
+    return "Please sign in before uploading images.";
   }
   return raw;
 }
@@ -395,7 +428,7 @@ function getFilteredTasks() {
     .filter(task => section === "All" || task.section === section)
     .filter(task => {
       if (!search) return true;
-      return [task.pic, task.task, task.description, task.instruction, task.comment, task.section]
+      return [task.pic, task.task, task.description, task.instruction, task.comment, task.section, imageArray(task.images).map(image => `${image.caption || ""} ${image.name || ""}`).join(" ")]
         .join(" ")
         .toLowerCase()
         .includes(search);
@@ -405,7 +438,112 @@ function getFilteredTasks() {
 function updateTaskPreview(card, task) {
   card.querySelector(".task-section-label").textContent = task.section || "Task";
   card.querySelector(".task-title-preview").textContent = task.task || "Untitled task";
-  card.querySelector(".task-meta-preview").textContent = `${task.pic || "No PIC"} · ${task.status || "No status"}`;
+  const count = taskImageCount(task);
+  card.querySelector(".task-meta-preview").textContent = `${task.pic || "No PIC"} · ${task.status || "No status"}${count ? ` · ${count} image(s)` : ""}`;
+}
+
+function renderEditorImages(card, taskIndex) {
+  const gallery = card.querySelector(".task-image-gallery");
+  const count = card.querySelector(".image-count");
+  const task = state.tasks[taskIndex];
+  const images = imageArray(task.images).filter(image => normalize(image?.url));
+
+  if (count) count.textContent = `${images.length} image(s)`;
+  if (!gallery) return;
+
+  if (!images.length) {
+    gallery.innerHTML = `<p class="muted no-images-note">No image added yet.</p>`;
+    return;
+  }
+
+  gallery.innerHTML = images.map((image, imageIndex) => `
+    <figure class="task-image-thumb">
+      <img src="${escapeAttribute(image.url)}" alt="${escapeAttribute(image.caption || image.name || "Meeting image")}" loading="lazy" />
+      <figcaption>
+        <strong>${escapeHtml(image.caption || image.name || "Meeting image")}</strong>
+        ${image.name ? `<span>${escapeHtml(image.name)}</span>` : ""}
+      </figcaption>
+      <button class="danger ghost remove-image-btn" type="button" data-image-index="${imageIndex}">Remove</button>
+    </figure>`).join("");
+
+  gallery.querySelectorAll(".remove-image-btn").forEach(button => {
+    button.addEventListener("click", () => {
+      const imageIndex = Number(button.dataset.imageIndex);
+      state.tasks[taskIndex].images.splice(imageIndex, 1);
+      renderEditorImages(card, taskIndex);
+      updateTaskPreview(card, state.tasks[taskIndex]);
+      refreshSummaryStrip();
+    });
+  });
+}
+
+async function uploadImageForTask(card, taskIndex) {
+  const fileInput = card.querySelector(".task-image-file");
+  const captionInput = card.querySelector(".task-image-caption");
+  const status = card.querySelector(".image-upload-status");
+  const uploadBtn = card.querySelector(".upload-image-btn");
+  const file = fileInput?.files?.[0];
+
+  if (!file) {
+    alert("Please choose an image first.");
+    return;
+  }
+
+  try {
+    if (status) status.textContent = "Preparing upload...";
+    if (uploadBtn) uploadBtn.disabled = true;
+    const store = await getFirebaseStore();
+    const meetingId = currentFirebaseId || `draft-${state.date || todayIso()}`;
+    const taskId = `${taskIndex + 1}-${slug(state.tasks[taskIndex].task || "task")}`;
+
+    const uploaded = await store.uploadTaskImage(file, { meetingId, taskId }, (progress) => {
+      if (status) status.textContent = `Uploading image... ${progress}%`;
+    });
+
+    state.tasks[taskIndex].images = imageArray(state.tasks[taskIndex].images);
+    state.tasks[taskIndex].images.push({
+      ...uploaded,
+      caption: normalize(captionInput?.value)
+    });
+
+    if (fileInput) fileInput.value = "";
+    if (captionInput) captionInput.value = "";
+    if (status) status.textContent = "Image uploaded. Click Save to Firebase to save this meeting record.";
+    renderEditorImages(card, taskIndex);
+    updateTaskPreview(card, state.tasks[taskIndex]);
+    refreshSummaryStrip();
+  } catch (error) {
+    console.error(error);
+    if (status) status.textContent = "Upload failed.";
+    alert(firebaseErrorMessage(error));
+  } finally {
+    if (uploadBtn) uploadBtn.disabled = false;
+  }
+}
+
+function addImageUrlForTask(card, taskIndex) {
+  const urlInput = card.querySelector(".task-image-url");
+  const captionInput = card.querySelector(".task-image-caption");
+  const url = normalize(urlInput?.value);
+
+  if (!url) {
+    alert("Please paste an image URL first.");
+    return;
+  }
+
+  state.tasks[taskIndex].images = imageArray(state.tasks[taskIndex].images);
+  state.tasks[taskIndex].images.push({
+    url,
+    caption: normalize(captionInput?.value),
+    name: "Linked image",
+    uploadedAt: new Date().toISOString()
+  });
+
+  if (urlInput) urlInput.value = "";
+  if (captionInput) captionInput.value = "";
+  renderEditorImages(card, taskIndex);
+  updateTaskPreview(card, state.tasks[taskIndex]);
+  refreshSummaryStrip();
 }
 
 function renderTasks() {
@@ -444,6 +582,11 @@ function renderTasks() {
       });
     });
 
+    renderEditorImages(card, task.originalIndex);
+
+    card.querySelector(".upload-image-btn")?.addEventListener("click", () => uploadImageForTask(card, task.originalIndex));
+    card.querySelector(".add-image-url-btn")?.addEventListener("click", () => addImageUrlForTask(card, task.originalIndex));
+
     card.querySelector(".toggle-task").addEventListener("click", () => {
       card.classList.toggle("collapsed");
       card.querySelector(".toggle-task").textContent = card.classList.contains("collapsed") ? "Expand" : "Collapse";
@@ -481,7 +624,8 @@ function blankTask(section = "IT Support") {
     deadline: "",
     extendedDeadline: "",
     dateComplete: "",
-    comment: ""
+    comment: "",
+    images: []
   };
 }
 
@@ -529,6 +673,23 @@ function timelineLine(task) {
   return parts.length ? `<div class="timeline-line">${parts.join("")}</div>` : "";
 }
 
+function renderTaskImages(task) {
+  const images = imageArray(task.images).filter(image => normalize(image?.url));
+  if (!images.length) return "";
+
+  return `
+    <div class="minute-block image-block">
+      <h5>Images / Supporting Evidence</h5>
+      <div class="minute-image-grid">
+        ${images.map(image => `
+          <figure>
+            <img src="${escapeAttribute(image.url)}" alt="${escapeAttribute(image.caption || image.name || "Meeting image")}" loading="lazy" />
+            ${(image.caption || image.name) ? `<figcaption>${escapeHtml(image.caption || image.name)}</figcaption>` : ""}
+          </figure>`).join("")}
+      </div>
+    </div>`;
+}
+
 function renderTaskMinutes(task, number) {
   const bullets = splitIntoBullets(task.description);
   const instructionBullets = splitIntoBullets(task.instruction);
@@ -558,6 +719,7 @@ function renderTaskMinutes(task, number) {
         </div>` : ""}
 
       ${timelineLine(task)}
+      ${renderTaskImages(task)}
 
       ${commentBullets.length ? `
         <div class="minute-block note-block">
@@ -741,7 +903,7 @@ function downloadWord() {
 
 function exportStyles() {
   return `
-    body{font-family:Arial,sans-serif;color:#111827;line-height:1.5;margin:32px;background:white}.minutes-document{max-width:900px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.12em;color:#2563eb;font-size:12px;font-weight:bold}.minutes-title{border-bottom:3px solid #111827;padding-bottom:20px;margin-bottom:24px}.minutes-title h2{font-size:30px;margin:4px 0 10px}.minutes-section{margin:22px 0;page-break-inside:avoid}.minutes-section h3{font-size:20px;border-bottom:1px solid #d1d5db;padding-bottom:8px}.details-grid,.mini-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.details-grid div,.mini-stats div{border:1px solid #d1d5db;padding:12px;border-radius:8px}.details-grid strong,.mini-stats strong{display:block;color:#111827}.details-grid span,.mini-stats span{display:block;color:#374151}.minute-item{border:1px solid #d1d5db;border-radius:10px;padding:16px;margin:14px 0}.minute-item-head{display:flex;justify-content:space-between;gap:16px}.minute-item h4{font-size:18px;margin:4px 0}.badge{border:1px solid #9ca3af;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:bold;height:max-content}.badge.success{background:#dcfce7;color:#166534}.badge.info{background:#dbeafe;color:#1d4ed8}.badge.warning{background:#fef3c7;color:#92400e}.badge.danger{background:#fee2e2;color:#991b1b}.minute-block{margin-top:12px}.minute-block h5{margin:0 0 6px}.highlight-block{background:#eff6ff;border-left:4px solid #2563eb;padding:10px}.note-block{background:#f9fafb;border-left:4px solid #6b7280;padding:10px}.timeline-line{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.timeline-line span{background:#f3f4f6;border-radius:999px;padding:6px 10px}.decision-list li{margin-bottom:12px}.decision-list span{display:block;color:#6b7280}.action-table{width:100%;border-collapse:collapse}.action-table th,.action-table td{border:1px solid #d1d5db;padding:8px;text-align:left}.action-table th{background:#f3f4f6}`;
+    body{font-family:Arial,sans-serif;color:#111827;line-height:1.5;margin:32px;background:white}.minutes-document{max-width:900px;margin:auto}.eyebrow{text-transform:uppercase;letter-spacing:.12em;color:#2563eb;font-size:12px;font-weight:bold}.minutes-title{border-bottom:3px solid #111827;padding-bottom:20px;margin-bottom:24px}.minutes-title h2{font-size:30px;margin:4px 0 10px}.minutes-section{margin:22px 0;page-break-inside:avoid}.minutes-section h3{font-size:20px;border-bottom:1px solid #d1d5db;padding-bottom:8px}.details-grid,.mini-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.details-grid div,.mini-stats div{border:1px solid #d1d5db;padding:12px;border-radius:8px}.details-grid strong,.mini-stats strong{display:block;color:#111827}.details-grid span,.mini-stats span{display:block;color:#374151}.minute-item{border:1px solid #d1d5db;border-radius:10px;padding:16px;margin:14px 0}.minute-item-head{display:flex;justify-content:space-between;gap:16px}.minute-item h4{font-size:18px;margin:4px 0}.badge{border:1px solid #9ca3af;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:bold;height:max-content}.badge.success{background:#dcfce7;color:#166534}.badge.info{background:#dbeafe;color:#1d4ed8}.badge.warning{background:#fef3c7;color:#92400e}.badge.danger{background:#fee2e2;color:#991b1b}.minute-block{margin-top:12px}.minute-block h5{margin:0 0 6px}.highlight-block{background:#eff6ff;border-left:4px solid #2563eb;padding:10px}.note-block{background:#f9fafb;border-left:4px solid #6b7280;padding:10px}.timeline-line{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}.timeline-line span{background:#f3f4f6;border-radius:999px;padding:6px 10px}.decision-list li{margin-bottom:12px}.decision-list span{display:block;color:#6b7280}.action-table{width:100%;border-collapse:collapse}.action-table th,.action-table td{border:1px solid #d1d5db;padding:8px;text-align:left}.action-table th{background:#f3f4f6}.image-block{background:#f8fafc;border-left:4px solid #7c3aed;padding:10px}.minute-image-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.minute-image-grid figure{margin:0;border:1px solid #d1d5db;border-radius:10px;padding:8px}.minute-image-grid img{width:100%;max-height:260px;object-fit:contain;border-radius:8px}.minute-image-grid figcaption{font-size:12px;color:#4b5563;margin-top:6px}`;
 }
 
 function saveDraft() {

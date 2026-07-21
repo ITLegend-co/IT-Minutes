@@ -306,6 +306,41 @@
           Comment / Note
           <textarea data-field="comment" rows="3" placeholder="Additional note, management request, or follow-up reminder."></textarea>
         </label>
+
+        <section class="image-input-box">
+          <div class="image-input-head">
+            <div>
+              <p class="eyebrow">Optional Evidence</p>
+              <h4>Images / Attachments</h4>
+              <p class="muted">Upload photos, screenshots, receipts, or supporting evidence for this item.</p>
+            </div>
+            <span class="status-pill small-pill image-count">0 image(s)</span>
+          </div>
+
+          <div class="image-upload-grid">
+            <label>
+              Upload Image
+              <input class="task-image-file" type="file" accept="image/*" />
+            </label>
+            <label>
+              Image Caption
+              <input class="task-image-caption" type="text" placeholder="Example: Screenshot of payment failure" />
+            </label>
+          </div>
+
+          <div class="button-row image-actions">
+            <button class="primary upload-image-btn" type="button">Upload to Firebase</button>
+            <button class="ghost add-image-url-btn" type="button">Add Image URL</button>
+          </div>
+
+          <label class="image-url-label">
+            Image URL / Link
+            <input class="task-image-url" type="url" placeholder="Paste image link here if already uploaded elsewhere" />
+          </label>
+
+          <p class="muted image-upload-status"></p>
+          <div class="task-image-gallery"></div>
+        </section>
       </div>
     </article>
   </template>

@@ -1,26 +1,38 @@
-QUICK EDITING NOTES — FIREBASE VERSION
+QUICK EDITING NOTES — FIREBASE + IMAGE VERSION
 
 1. Main storage:
    - Meeting records are saved to Firebase Realtime Database.
-   - Records are stored under meetingRecords.
-   - The latest record ID is stored under metadata/latestId.
+   - Uploaded images are saved to Firebase Storage.
+   - The meeting record stores the image URL, caption, file name, and storage path.
 
-2. To save a new meeting:
+2. To add an image to IT minutes:
+   - Sign in to Firebase from the website.
+   - Open the task item.
+   - Go to Optional Evidence > Images / Attachments.
+   - Choose an image file.
+   - Add a caption.
+   - Click Upload to Firebase.
+   - Click Generate to view it in the minutes.
+   - Click Save to Firebase to save the meeting record with the image link.
+
+3. To add an image that is already online:
+   - Paste the image link in Image URL / Link.
+   - Add a caption.
+   - Click Add Image URL.
+   - Generate and save the minutes.
+
+4. To save a new meeting:
    - Fill in the form.
+   - Upload any needed images.
    - Click Generate.
    - Click Save to Firebase.
 
-3. To view previous meetings:
+5. To view previous meetings:
    - Click Refresh List.
    - Choose a record from Previous meeting records.
    - Click Load Selected.
 
-4. To change Firebase project settings:
-   - Open firebase-config.js.
-   - Replace the firebaseConfig values.
-   - Make sure databaseURL is included.
-
-5. Recommended database rules:
+6. Recommended Realtime Database rules:
 {
   "rules": {
     ".read": "auth != null",
@@ -28,10 +40,20 @@ QUICK EDITING NOTES — FIREBASE VERSION
   }
 }
 
-6. If using authentication:
+7. Recommended Firebase Storage rules:
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /meetingImages/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}
+
+8. If using authentication:
    - Enable Email/Password in Firebase Authentication.
    - Add a user under Authentication > Users.
    - Add your GitHub Pages domain under Authentication > Settings > Authorized domains.
 
-7. Backup:
+9. Backup:
    - Download Data JSON still works if you want a local backup copy.

@@ -11,7 +11,117 @@
   The website automatically treats the newest date as the latest meeting.
 */
 
-const MEETING_RECORDS = [{
+const MEETING_RECORDS = [
+  {
+    id: "2026-08-12-it-meeting",
+    title: "I.T Meeting",
+    preparedBy: "Prepared by: IT Legend",
+    date: "2026-08-12",
+    time: "",
+    attendance: "",
+    objective: "To review completed IT support work, current project progress, equipment servicing, system access issues, and follow-up monitoring requirements.",
+    tasks: [
+      {
+        section: "IT Support",
+        pic: "Eizzat",
+        task: "Old CCTV Replacement",
+        status: "Task Completed",
+        description: "The original CCTV unit displayed flickering footage. Inspection found that stretched coaxial and power cables had placed excessive strain on the connections and caused gradual cable deterioration.\nThe technician first re-stripped and reconnected the existing cables, but the footage continued to flicker. The faulty CCTV unit was then replaced with a new unit, the cables were extended to prevent further strain, and the camera angle was restored to its previous position behind Vince's desk.",
+        instruction: "The replacement CCTV is operating normally with no flickering. The technician's bill is expected to be issued the following week.",
+        taskDate: "1 August 2026",
+        deadline: "",
+        extendedDeadline: "",
+        dateComplete: "1 August 2026",
+        comment: "",
+        images: []
+      },
+      {
+        section: "IT Support",
+        pic: "Eizzat",
+        task: "Computer Upgrade for Ferdinand",
+        status: "Task Completed",
+        description: "Ferdinand's computer was lagging during multitasking due to outdated hardware. The original setup used an Intel Pentium G645 processor, H61H2-AM3 motherboard, 8GB DDR3 RAM, Nvidia GT 710 GPU, 256GB SSD, 500GB HDD, and 200W power supply.\nData from the C drive was transferred to the D drive before formatting. The casing was cleaned, and spare components were installed: Intel Core i5-7400 processor, H110M-D motherboard, 8GB DDR4 RAM, and 600W power supply. The existing SSD, HDD, and GT 710 GPU were reused. New thermal paste was applied, Windows 10 Home and the required applications were installed, and a final stress test was completed.",
+        instruction: "The upgraded computer passed the stress test and operated normally without premature shutdown. The highest recorded test temperature was 76°C, and the computer was handed back to Ferdinand.",
+        taskDate: "4 August 2026",
+        deadline: "",
+        extendedDeadline: "",
+        dateComplete: "4 August 2026",
+        comment: "",
+        images: []
+      },
+      {
+        section: "IT Support",
+        pic: "Eizzat",
+        task: "Fuji Xerox DocuCentre S2520 Servicing",
+        status: "Monitoring",
+        description: "The Accounts Department reported a Drum End of Life message together with lines and toner spots on printed paper. Capital sent a technician to the KK office. The technician found toner-dust buildup inside the cartridge, cleaned and checked the compartment, and performed a test print. The Replace Drum message cleared, but marks remained on the paper.\nThe technician replaced the drum cartridge. After replacement, the lines and toner spots were significantly reduced.",
+        instruction: "Continue monitoring the print quality for several print cycles, as the technician advised that the remaining marks should gradually disappear after the newly replaced drum settles.",
+        taskDate: "3 August 2026",
+        deadline: "",
+        extendedDeadline: "",
+        dateComplete: "",
+        comment: "Requested by the Accounts Department. Servicing action was carried out on 4 August 2026.",
+        images: []
+      },
+      {
+        section: "IT Support",
+        pic: "Eizzat",
+        task: "Dispose Old Samsung SCX-4521F Printer",
+        status: "Task Completed",
+        description: "Approval was requested from Mr. Wilfred to dispose of the old Samsung SCX-4521F printer.",
+        instruction: "The old printer was taken to the recycling centre for disposal.",
+        taskDate: "5 August 2026",
+        deadline: "",
+        extendedDeadline: "",
+        dateComplete: "12 August 2026",
+        comment: "",
+        images: []
+      },
+      {
+        section: "IT Support",
+        pic: "Eizzat",
+        task: "Fae Unable to View HKD Meeting Recording in Teams",
+        status: "Task Completed",
+        description: "Fae could not view the latest HKD meeting recording. Remote access and the Microsoft Teams web version were tested, but the recording remained unavailable. Access was then checked using Aron's, Pam's, and the RSVN team accounts, with the same result.\nThe recording was found under the MT KP & OPS account. Access was granted through Pody's account, allowing Fae to view the recording successfully.",
+        instruction: "Access to the required HKD meeting recording has been restored.",
+        taskDate: "11 August 2026",
+        deadline: "",
+        extendedDeadline: "",
+        dateComplete: "11 August 2026",
+        comment: "",
+        images: []
+      },
+      {
+        section: "Project",
+        pic: "Eizzat",
+        task: "CCTV Installation at PH",
+        status: "Still In Progress",
+        description: "Finalization is ongoing before the CCTV installation at Pendant Hut. Reference: https://canva.link/1gy2hvt4ns58sjt",
+        instruction: "Complete the final installation planning and confirm the setup before deployment to PH.",
+        taskDate: "",
+        deadline: "",
+        extendedDeadline: "",
+        dateComplete: "",
+        comment: "",
+        images: []
+      },
+      {
+        section: "Project",
+        pic: "Adly",
+        task: "KP Internet Backup Solution Setup",
+        status: "Monitoring",
+        description: "U Mobile was selected as the KP backup internet solution because it supports fixed IP, unlimited internet, and operational systems requiring stable remote access. Initial testing at KK confirmed that the service was suitable for deployment.\nOn 7 August 2026, the U Mobile modem was installed and configured at KP, replacing the previous Celcom backup connection. Network access was configured and remote access to CCTV and the Anviz attendance system was verified through both Unifi and U Mobile.\nAverage KP speed results were 4.91 Mbps download and 9.54 Mbps upload for Unifi, and 5.01 Mbps download and 9.36 Mbps upload for U Mobile.",
+        instruction: "Monitor the U Mobile connection for three months from 7 August 2026. After the monitoring period, evaluate whether it is stable enough to replace Unifi and whether the Unifi service can be terminated.",
+        taskDate: "4 August 2026",
+        deadline: "7 November 2026",
+        extendedDeadline: "",
+        dateComplete: "7 August 2026",
+        comment: "Installation was completed between 1:00 PM and 3:15 PM. Internal modem access credentials are intentionally excluded from this public repository.",
+        images: []
+      }
+    ]
+  },
+  {
   id: "2026-06-11-it-meeting",
   title: "I.T Meeting",
   preparedBy: "Prepared by: IT Legend",

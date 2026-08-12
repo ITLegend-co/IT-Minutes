@@ -3,8 +3,14 @@ const cloneData = (value) => {
   if (typeof structuredClone === "function") return structuredClone(value);
   return JSON.parse(JSON.stringify(value));
 };
-const state = cloneData(DEFAULT_MEETING);
+const MEETING_LIBRARY = Array.isArray(globalThis.MEETING_RECORDS) && globalThis.MEETING_RECORDS.length
+  ? cloneData(globalThis.MEETING_RECORDS)
+  : [cloneData(DEFAULT_MEETING)];
+const state = cloneData(MEETING_LIBRARY[0]);
 let allCollapsed = false;
+let staticRecords = [];
+let latestStaticId = "";
+let currentStaticId = "";
 let firebaseRecords = [];
 let latestFirebaseId = "";
 let currentFirebaseId = "";
@@ -151,6 +157,47 @@ function replaceStateWith(data, sourceLabel = "meeting record") {
   setDataStatus(`Loaded: ${sourceLabel}`);
 }
 
+function staticRecordId(record, index) {
+  return normalize(record?.id) || `${record?.date || "undated"}-${slug(record?.title || "meeting")}-${index + 1}`;
+}
+
+function initializeStaticRecords({ autoLoadLatest = false } = {}) {
+  staticRecords = MEETING_LIBRARY.map((meeting, index) => ({
+    id: staticRecordId(meeting, index),
+    title: meeting.title || "I.T Meeting",
+    date: meeting.date || "",
+    sourceIndex: index
+  })).sort((a, b) => {
+    if (a.date !== b.date) return b.date.localeCompare(a.date);
+    return a.sourceIndex - b.sourceIndex;
+  });
+
+  latestStaticId = staticRecords[0]?.id || "";
+  populateRecordsSelect();
+  setDataStatus(staticRecords.length
+    ? `${staticRecords.length} record(s) loaded from sample-data.js`
+    : "No meeting records found in sample-data.js");
+
+  if (autoLoadLatest && latestStaticId) loadStaticRecordById(latestStaticId, "latest meeting");
+}
+
+function loadStaticRecordById(id, label = "meeting record") {
+  const record = staticRecords.find(item => item.id === id);
+  if (!record) {
+    alert("Meeting record not found in sample-data.js.");
+    return;
+  }
+
+  currentStaticId = id;
+  replaceStateWith(MEETING_LIBRARY[record.sourceIndex], record.title || label);
+  if (elements.recordsSelect) elements.recordsSelect.value = id;
+  setDataStatus(`Loaded from sample-data.js: ${record.title || id}`);
+}
+
+function showSampleDataInstructions() {
+  alert("Permanent changes are made in sample-data.js. Edit the meeting records in that file, upload or commit it to GitHub, then reload this page.");
+}
+
 function getFirebaseStore() {
   if (window.ITMinutesFirebase) return Promise.resolve(window.ITMinutesFirebase);
   if (window.ITMinutesFirebaseReady) return window.ITMinutesFirebaseReady;
@@ -194,16 +241,15 @@ function meetingLabel(record) {
 function populateRecordsSelect() {
   if (!elements.recordsSelect) return;
 
-  if (!firebaseRecords.length) {
-    elements.recordsSelect.innerHTML = `<option value="">No Firebase record found</option>`;
+  if (!staticRecords.length) {
+    elements.recordsSelect.innerHTML = `<option value="">No record found in sample-data.js</option>`;
     return;
   }
 
-  elements.recordsSelect.innerHTML = firebaseRecords.map(record => `
+  elements.recordsSelect.innerHTML = staticRecords.map(record => `
     <option value="${escapeHtml(record.id)}">${escapeHtml(meetingLabel(record))}</option>`).join("");
 
-  if (currentFirebaseId) elements.recordsSelect.value = currentFirebaseId;
-  else if (latestFirebaseId) elements.recordsSelect.value = latestFirebaseId;
+  elements.recordsSelect.value = currentStaticId || latestStaticId;
 }
 
 async function loadFirebaseRecords({ autoLoadLatest = false, showAlert = false } = {}) {
@@ -255,15 +301,12 @@ async function loadFirebaseRecordById(id, label = "Firebase record") {
 
 function loadSelectedRecord() {
   const id = elements.recordsSelect?.value || "";
-  loadFirebaseRecordById(id, "selected Firebase record");
+  loadStaticRecordById(id, "selected meeting record");
 }
 
 function loadLatestData() {
-  if (latestFirebaseId) {
-    loadFirebaseRecordById(latestFirebaseId, "latest Firebase record");
-    return;
-  }
-  loadFirebaseRecords({ autoLoadLatest: true, showAlert: true });
+  if (!latestStaticId) initializeStaticRecords();
+  if (latestStaticId) loadStaticRecordById(latestStaticId, "latest meeting");
 }
 
 function currentMeetingData() {
@@ -931,7 +974,7 @@ function resetAll() {
   const confirmed = confirm("Reset the form back to the default sample data?");
   if (!confirmed) return;
   currentFirebaseId = "";
-  const fresh = cloneData(DEFAULT_MEETING);
+  const fresh = cloneData(MEETING_LIBRARY[0]);
   Object.keys(state).forEach(key => delete state[key]);
   Object.assign(state, fresh);
   populateMeetingDetails();
@@ -960,13 +1003,13 @@ function bindEvents() {
   document.getElementById("downloadHtmlBtn").addEventListener("click", downloadHtml);
   document.getElementById("downloadWordBtn").addEventListener("click", downloadWord);
   elements.downloadJsonBtn?.addEventListener("click", downloadMeetingJson);
-  elements.saveFirebaseBtn?.addEventListener("click", saveMeetingToFirebase);
-  elements.saveFirebaseTopBtn?.addEventListener("click", saveMeetingToFirebase);
-  elements.saveFirebaseOutputBtn?.addEventListener("click", saveMeetingToFirebase);
+  elements.saveFirebaseBtn?.addEventListener("click", showSampleDataInstructions);
+  elements.saveFirebaseTopBtn?.addEventListener("click", showSampleDataInstructions);
+  elements.saveFirebaseOutputBtn?.addEventListener("click", showSampleDataInstructions);
   elements.firebaseSignInBtn?.addEventListener("click", signInFirebase);
   elements.firebaseSignOutBtn?.addEventListener("click", signOutFirebase);
   elements.loadSelectedRecordBtn?.addEventListener("click", loadSelectedRecord);
-  elements.refreshRecordsBtn?.addEventListener("click", () => loadFirebaseRecords({ showAlert: true }));
+  elements.refreshRecordsBtn?.addEventListener("click", () => initializeStaticRecords());
   elements.loadLatestDataBtn?.addEventListener("click", loadLatestData);
   elements.importJsonInput?.addEventListener("change", importJsonFile);
   document.getElementById("saveDraftBtn").addEventListener("click", saveDraft);
@@ -987,4 +1030,4 @@ populateMeetingDetails();
 renderTasks();
 refreshSummaryStrip();
 bindEvents();
-initializeFirebaseConnection();
+initializeStaticRecords({ autoLoadLatest: true });

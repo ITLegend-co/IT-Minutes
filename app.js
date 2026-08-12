@@ -3,8 +3,8 @@ const cloneData = (value) => {
   if (typeof structuredClone === "function") return structuredClone(value);
   return JSON.parse(JSON.stringify(value));
 };
-const MEETING_LIBRARY = Array.isArray(globalThis.MEETING_RECORDS) && globalThis.MEETING_RECORDS.length
-  ? cloneData(globalThis.MEETING_RECORDS)
+const MEETING_LIBRARY = typeof MEETING_RECORDS !== "undefined" && Array.isArray(MEETING_RECORDS) && MEETING_RECORDS.length
+  ? cloneData(MEETING_RECORDS)
   : [cloneData(DEFAULT_MEETING)];
 const state = cloneData(MEETING_LIBRARY[0]);
 let allCollapsed = false;

@@ -40,7 +40,7 @@
         </div>
         <div class="top-actions">
           <button class="ghost" id="loadLatestDataBtn" type="button">Load Latest</button>
-          <button class="primary" id="saveFirebaseTopBtn" type="button">Save to Firebase</button>
+          <button class="primary" id="saveFirebaseTopBtn" type="button">Data Entry Guide</button>
           <button class="ghost" id="saveDraftBtn" type="button">Save Draft</button>
           <button class="ghost" id="loadDraftBtn" type="button">Load Draft</button>
           <button class="danger ghost" id="resetBtn" type="button">Reset</button>
@@ -52,53 +52,39 @@
           <section class="form-card" id="dataLibrary">
             <div class="section-head stacked-on-mobile">
               <div>
-                <p class="eyebrow">Firebase Database</p>
+                <p class="eyebrow">JavaScript Data File</p>
                 <h2>Saved Meeting Records</h2>
-                <p class="muted">Save meeting records to Firebase Realtime Database, load the latest record, or view previous minutes.</p>
+                <p class="muted">Meeting records are loaded directly from <code>sample-data.js</code>. Upload the edited file to GitHub to publish permanent updates.</p>
               </div>
-              <span class="status-pill" id="dataStatus">Connecting to Firebase...</span>
+              <span class="status-pill" id="dataStatus">Loading sample-data.js...</span>
             </div>
 
             <div class="auth-box">
               <div>
-                <h3>Firebase Sign In</h3>
-                <p class="muted">Recommended if your database rules require authentication.</p>
+                <h3>How to update meeting data</h3>
+                <p class="muted">Open <code>sample-data.js</code>, copy an existing meeting object, place the new record at the top, update its details, then commit or upload the file to GitHub.</p>
               </div>
-              <div class="auth-grid">
-                <label>
-                  Email
-                  <input id="firebaseEmail" type="email" placeholder="your-email@example.com" autocomplete="email" />
-                </label>
-                <label>
-                  Password
-                  <input id="firebasePassword" type="password" placeholder="Firebase password" autocomplete="current-password" />
-                </label>
-                <div class="button-row auth-buttons">
-                  <button class="primary" id="firebaseSignInBtn" type="button">Sign In</button>
-                  <button class="ghost" id="firebaseSignOutBtn" type="button">Sign Out</button>
-                </div>
-              </div>
-              <span class="status-pill auth-status" id="firebaseAuthStatus">Checking sign-in status...</span>
+              <span class="status-pill auth-status">Manual JavaScript input</span>
             </div>
 
             <div class="data-toolbar">
               <label>
                 Previous meeting records
                 <select id="recordsSelect">
-                  <option value="">Loading Firebase records...</option>
+                  <option value="">Loading records from sample-data.js...</option>
                 </select>
               </label>
               <div class="button-row data-buttons">
                 <button class="primary" id="loadSelectedRecordBtn" type="button">Load Selected</button>
                 <button class="ghost" id="refreshRecordsBtn" type="button">Refresh List</button>
-                <button class="ghost" id="saveFirebaseBtn" type="button">Save to Firebase</button>
+                <button class="ghost" id="saveFirebaseBtn" type="button">Data Entry Guide</button>
               </div>
             </div>
 
             <div class="import-box">
               <div>
                 <h3>Import / Backup Meeting Data</h3>
-                <p class="muted">Firebase will be the main storage. You can still import or download JSON as backup.</p>
+                <p class="muted">You can import JSON temporarily or download a JSON backup. Permanent website records remain in <code>sample-data.js</code>.</p>
               </div>
               <div class="button-row">
                 <label class="file-button">
@@ -109,7 +95,7 @@
             </div>
 
             <div class="notice-box">
-              <strong>Firebase note:</strong> New meeting records are saved under <code>meetingRecords</code> in Firebase Realtime Database. The app also keeps <code>metadata/latestId</code> so the latest meeting can load automatically.
+              <strong>Data source:</strong> The website reads the <code>MEETING_RECORDS</code> list in <code>sample-data.js</code>. Records are sorted by meeting date, newest first.
             </div>
           </section>
 
@@ -208,7 +194,7 @@
               <button class="ghost" id="downloadHtmlBtn" type="button">Download HTML</button>
               <button class="ghost" id="downloadWordBtn" type="button">Download Word</button>
               <button class="ghost" id="downloadJsonBtn" type="button">Download Data JSON</button>
-              <button class="primary" id="saveFirebaseOutputBtn" type="button">Save to Firebase</button>
+              <button class="primary" id="saveFirebaseOutputBtn" type="button">Data Entry Guide</button>
             </div>
           </div>
 
@@ -312,7 +298,7 @@
             <div>
               <p class="eyebrow">Optional Evidence</p>
               <h4>Images / Attachments</h4>
-              <p class="muted">Upload photos, screenshots, receipts, or supporting evidence for this item.</p>
+              <p class="muted">For permanent evidence, add the image URL to this task in sample-data.js.</p>
             </div>
             <span class="status-pill small-pill image-count">0 image(s)</span>
           </div>
@@ -329,7 +315,7 @@
           </div>
 
           <div class="button-row image-actions">
-            <button class="primary upload-image-btn" type="button">Upload to Firebase</button>
+            <button class="primary upload-image-btn" type="button" disabled title="Add permanent image URLs in sample-data.js">Edit sample-data.js for Upload</button>
             <button class="ghost add-image-url-btn" type="button">Add Image URL</button>
           </div>
 
@@ -346,7 +332,6 @@
   </template>
 
   <script src="sample-data.js"></script>
-  <script type="module" src="firebase-config.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

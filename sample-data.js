@@ -1,10 +1,18 @@
 /*
-  DEFAULT SAMPLE DATA
-  You can edit this file if you want the website to start with your latest meeting data.
-  The form can also be edited directly in the browser.
+  MEETING RECORD LIBRARY
+
+  This file is the main source of meeting data for the website.
+  To add a new meeting:
+  1. Copy one complete meeting object inside MEETING_RECORDS.
+  2. Paste it at the TOP of the list.
+  3. Give it a unique id and update its meeting details/tasks.
+  4. Commit or upload this file to GitHub.
+
+  The website automatically treats the newest date as the latest meeting.
 */
 
-const DEFAULT_MEETING = {
+const MEETING_RECORDS = [{
+  id: "2026-06-11-it-meeting",
   title: "I.T Meeting",
   preparedBy: "Prepared by: IT Legend",
   date: "2026-06-11",
@@ -130,4 +138,7 @@ const DEFAULT_MEETING = {
       comment: "Madam asked not to include disposed and missing items. Madam suggested selling the barcode scanner internally first. If there is no buyer, proceed to list it on Carousell or Facebook Marketplace. Madam asked Adly to present the details to make the decision easier."
     }
   ]
-};
+}];
+
+// Used as a safe fallback by the application.
+const DEFAULT_MEETING = MEETING_RECORDS[0];

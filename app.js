@@ -478,9 +478,18 @@ function getFilteredTasks() {
     });
 }
 
+function taskTitleHtml(task) {
+  const title = escapeHtml(task.task || "Untitled task");
+  if (normalize(task.task) === "Inventory Updates" &&
+      /https:\/\/itlegend-co\.github\.io\//.test(task.description || "")) {
+    return `<a href="https://itlegend-co.github.io/" target="_blank" rel="noopener noreferrer">${title}</a>`;
+  }
+  return title;
+}
+
 function updateTaskPreview(card, task) {
   card.querySelector(".task-section-label").textContent = task.section || "Task";
-  card.querySelector(".task-title-preview").textContent = task.task || "Untitled task";
+  card.querySelector(".task-title-preview").innerHTML = taskTitleHtml(task);
   const count = taskImageCount(task);
   card.querySelector(".task-meta-preview").textContent = `${task.pic || "No PIC"} · ${task.status || "No status"}${count ? ` · ${count} image(s)` : ""}`;
 }
@@ -743,7 +752,7 @@ function renderTaskMinutes(task, number) {
       <div class="minute-item-head">
         <div>
           <p class="eyebrow">Item ${number} · ${escapeHtml(task.section || "General")}</p>
-          <h4>${escapeHtml(task.task || "Untitled task")}</h4>
+          <h4>${taskTitleHtml(task)}</h4>
           <p class="muted"><strong>Person In Charge:</strong> ${escapeHtml(task.pic || "-")}</p>
         </div>
         ${makeBadge(task.status)}
@@ -823,7 +832,7 @@ function renderActionItems() {
           ${actionable.map((task, index) => `
             <tr>
               <td>${index + 1}</td>
-              <td>${escapeHtml(task.task || "-")}</td>
+              <td>${taskTitleHtml(task)}</td>
               <td>${escapeHtml(task.pic || "-")}</td>
               <td>${escapeHtml(task.extendedDeadline || task.deadline || "To be confirmed")}</td>
               <td>${escapeHtml(task.status || "-")}</td>
